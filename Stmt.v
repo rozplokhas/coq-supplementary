@@ -55,4 +55,57 @@ where "c1 == s ==> c2" := (bs_int s c1 c2).
 (* Big-step semantics is deterministic *)
 (* Note: DB did not prove this yet     *)
 Lemma bs_int_deterministic : forall (c c1 c2 : conf) (s : stmt), c == s ==> c1 -> c == s ==> c2 -> c1 = c2.
-Proof. admit. Qed.
+Proof.
+  assert (zero_one_contra: forall (e : expr) (s : state Z) (P : Prop),
+                              [|e|] s => (Z.zero) -> [|e|] s => (Z.one) -> P).
+  { intros. assert (contra: Z.zero = Z.one).
+    * apply bs_eval_deterministic with (e := e) (s := s). auto. auto.
+    * inversion contra. }
+  intros c c1 c2 s FH. generalize dependent c2. induction FH.
+  - intros. inversion H. reflexivity.
+  - intros. inversion H0. replace z0 with z.
+    + reflexivity.
+    + apply bs_eval_deterministic with (e := e) (s := s). auto. auto.
+  - intros. inversion H. reflexivity.
+  - intros. inversion H0. replace z0 with z.
+    + reflexivity.
+    + apply bs_eval_deterministic with (e := e) (s := s). auto. auto.
+  - intros. inversion H.
+    assert (c'eq: c'= c'0). { apply IHFH1. auto. } rewrite <- c'eq in H5.
+    apply IHFH2. auto.
+  - intros. inversion H0.
+    + apply IHFH. auto.
+    + apply zero_one_contra with (e := e) (s := s). auto. auto.
+  - intros. inversion H0.
+    + apply zero_one_contra with (e := e) (s := s). auto. auto.
+    + apply IHFH. auto.
+  - intros. inversion H0.
+    + assert (c'eq: c'= c'0). { apply IHFH1. auto. } rewrite <- c'eq in H9.
+      apply IHFH2. auto.
+    + apply zero_one_contra with (e := e) (s := st). auto. auto.
+  - intros. inversion H0.
+    + apply zero_one_contra with (e := e) (s := st). auto. auto.
+    + reflexivity.
+Qed.
+
+Lemma while_unfolding: forall (c c1 : conf) (e : expr) (s : stmt),
+  c == WHILE e DO s END ==> c1 <-> c == COND e THEN (s ;; WHILE e DO s END) ELSE SKIP END ==> c1.
+Proof.
+  intros. split.
+  - intros. inversion H.
+    + apply bs_If_True. auto. apply bs_Seq with (c' := c'). auto. auto.
+    + apply bs_If_False. auto. apply bs_Skip.
+  - intros. inversion H.
+    + inversion H6. apply bs_While_True with (c' := c'0). auto. auto. auto.
+    + inversion H6. apply bs_While_False. auto.
+Qed.
+
+Lemma seq_associativity: forall (c c1 : conf) (s1 s2 s3 : stmt),
+  c == s1 ;; (s2 ;; s3) ==> c1 <-> c == (s1 ;; s2) ;; s3 ==> c1.
+Proof.
+  intros. split.
+  - intros. inversion H. inversion H5. apply bs_Seq with (c' := c'0).
+    apply bs_Seq with (c' := c'). auto. auto. auto.
+  - intros. inversion H. inversion H2. apply bs_Seq with (c' := c'0).
+    auto. apply bs_Seq with (c' := c'). auto. auto.
+Qed.
