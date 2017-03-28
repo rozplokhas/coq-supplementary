@@ -1,3 +1,5 @@
+Add LoadPath "~/AU/Coq/supplementary".
+
 Require Export BigZ.
 Require Export Id.
 Require Export State.
@@ -5,7 +7,7 @@ Require Export State.
 (* Type of arithmetic expressions *)
 Inductive expr : Type :=
   | Nat : nat  -> expr
-  | Var : id   -> expr              
+  | Var : id   -> expr
   | Add : expr -> expr -> expr
   | Sub : expr -> expr -> expr
   | Mul : expr -> expr -> expr
@@ -36,10 +38,10 @@ Notation "x '[&]'  y" := (And x y) (at level 38, left associativity).
 Notation "x '[\/]' y" := (Or  x y) (at level 38, left associativity).
 
 Definition zbool (x : Z) : Prop := x = Z.one \/ x = Z.zero.
-  
+
 Definition zor (x y : Z) : Z :=
   if Z_le_gt_dec (Z.of_nat 1) (x + y) then Z.one else Z.zero.
-   
+
 Reserved Notation "[| e |] st => z" (at level 0).
 Notation "st / x => y" := (st_binds Z st x y) (at level 0).
 
@@ -100,14 +102,18 @@ Hint Constructors bs_eval.
 
 Module SmokeTest.
 
-  Lemma nat_always : 
+  Lemma nat_always :
     forall (n : nat) (s : state Z), [| Nat n |] s => (Z.of_nat n).
-  Proof. admit. Qed.
+  Proof. auto. Qed.
 
   Lemma double_and_sum : 
     forall (s : state Z) (e : expr) (z : Z), 
       [| e [*] (Nat 2) |] s => z -> [| e [+] e |] s => z.
-  Proof. admit. Qed.
+  Proof.
+    intros s e z H. inversion H. inversion H5.
+    replace (Z.mul za (Z.of_nat 2)) with (Z.add za za).
+    - apply bs_Add. auto. auto.
+    - simpl. omega. Qed.
 
 End SmokeTest.
 
@@ -136,19 +142,171 @@ where "x ? e" := (V e x).
 *)
 Lemma defined_expression: forall (e : expr) (s : state Z) (z : Z) (id : id),
   [| e |] s => z -> id ? e -> exists z', s / id => z'.
-Proof. admit. Qed.
+Proof.
+  intros e s z id H. induction H.
+  - intros contra. inversion contra.
+  - intros iH. inversion iH. exists z. rewrite <- H0. apply H.
+  - intros H'. inversion H'. destruct H4. auto. auto.
+  - intros H'. inversion H'. destruct H4. auto. auto.
+  - intros H'. inversion H'. destruct H4. auto. auto.
+  - intros H'. inversion H'. destruct H4. auto. auto.
+  - intros H'. inversion H'. destruct H4. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H5. auto. auto.
+  - intros H'. inversion H'. destruct H6. auto. auto.
+  - intros H'. inversion H'. destruct H6. auto. auto.
+Qed.
 
 (* If a variable in expression is undefined in some state, then the expression
    is undefined is that state as well
 *)
 Lemma undefined_variable: forall (e : expr) (s : state Z) (id : id),
   id ? e -> (forall (z : Z), ~ (s / id => z)) -> (forall (z : Z), ~ ([| e |] s => z)).
-Proof. admit. Qed.
+Proof.
+  intros e s id. unfold not. induction e.
+  - intros H. inversion H.
+  - intros iH. inversion iH. intros nH z H. inversion H.
+    remember (nH z) as contra. contradiction.
+  - intros. inversion H1. inversion H. destruct H11.
+    + apply IHe1 with (z := za). auto. auto. auto.
+    + apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1. inversion H. destruct H11.
+    + apply IHe1 with (z := za). auto. auto. auto.
+    + apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1. inversion H. destruct H11.
+    + apply IHe1 with (z := za). auto. auto. auto.
+    + apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1. inversion H. destruct H11.
+    + apply IHe1 with (z := za). auto. auto. auto.
+    + apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1. inversion H. destruct H11.
+    + apply IHe1 with (z := za). auto. auto. auto.
+    + apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+    + inversion H. destruct H12.
+      * apply IHe1 with (z := za). auto. auto. auto.
+      * apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1. inversion H. destruct H13.
+    + apply IHe1 with (z := za). auto. auto. auto.
+    + apply IHe2 with (z := zb). auto. auto. auto.
+  - intros. inversion H1. inversion H. destruct H13.
+    + apply IHe1 with (z := za). auto. auto. auto.
+    + apply IHe2 with (z := zb). auto. auto. auto.
+Qed.
 
 (* The evaluation relation is deterministic *)
 Lemma bs_eval_deterministic: forall (e : expr) (s : state Z) (z1 z2 : Z),
   [| e |] s => z1 -> [| e |] s => z2 -> z1 = z2.
-Proof. admit. Qed.
+Proof.
+  intros e s. induction e.
+  - intros. inversion H. inversion H0. reflexivity.
+  - intros. inversion H. inversion H0. apply state_deterministic with (st := s) (x := i).
+    auto. auto.
+  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
+    reflexivity. auto. auto.
+  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
+    reflexivity. auto. auto.
+  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
+    reflexivity. auto. auto.
+  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
+    reflexivity. auto. auto.
+  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
+    reflexivity. auto. auto.
+  - intros. inversion H.
+    + inversion H0.
+      * reflexivity.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
+    + inversion H0.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
+      * reflexivity.
+  - intros. inversion H.
+    + inversion H0.
+      * reflexivity.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
+    + inversion H0.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
+      * reflexivity.
+  - intros. inversion H.
+    + inversion H0.
+      * reflexivity.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
+    + inversion H0.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
+      * reflexivity.
+  - intros. inversion H.
+    + inversion H0.
+      * reflexivity.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
+    + inversion H0.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
+      * reflexivity.
+  - intros. inversion H.
+    + inversion H0.
+      * reflexivity.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. congruence.
+    + inversion H0.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. congruence.
+      * reflexivity.
+  - intros. inversion H.
+    + inversion H0.
+      * reflexivity.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. congruence.
+    + inversion H0.
+      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. congruence.
+      * reflexivity.
+  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
+    reflexivity. auto. auto.
+  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
+    reflexivity. auto. auto.
+Qed.
 
 (* Equivalence of states w.r.t. an identifier *)
 Definition equivalent_states (s1 s2 : state Z) (id : id) :=
@@ -160,9 +318,111 @@ Definition equivalent_states (s1 s2 : state Z) (id : id) :=
 Lemma variable_relevance: forall (e : expr) (s1 s2 : state Z) (z : Z),
   (forall (id : id) (z : Z), id ? e -> equivalent_states s1 s2 id) -> 
   [| e |] s1 => z -> [| e |] s2 => z.
-Proof. admit. Qed.
-
- 
-
-
-  
+Proof.
+  intros e s1 s2. induction e.
+  - intros z _ H. inversion H. auto.
+  - intros z eqH H. assert (equi: equivalent_states s1 s2 i).
+    { apply eqH. apply (Z.of_nat 42). apply v_Var. } unfold equivalent_states in equi.
+    apply bs_Var. apply equi. inversion H. auto.
+  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
+    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Add. auto. auto. }
+    assert (rH: [|e2|] s2 => (zb)).
+    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Add. auto. auto. }
+    auto.
+  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
+    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Sub. auto. auto. }
+    assert (rH: [|e2|] s2 => (zb)).
+    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Sub. auto. auto. }
+    auto.
+  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
+    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Mul. auto. auto. }
+    assert (rH: [|e2|] s2 => (zb)).
+    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Mul. auto. auto. }
+    auto.
+  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
+    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Div. auto. auto. }
+    assert (rH: [|e2|] s2 => (zb)).
+    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Div. auto. auto. }
+    auto.
+  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
+    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Mod. auto. auto. }
+    assert (rH: [|e2|] s2 => (zb)).
+    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Mod. auto. auto. }
+    auto.
+  - intros. inversion H0.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Le. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Le. auto. auto. }
+        apply bs_Le_T with (za := za) (zb := zb). auto. auto. auto.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Le. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Le. auto. auto. }
+        apply bs_Le_F with (za := za) (zb := zb). auto. auto. auto.
+  - intros. inversion H0.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Lt. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Lt. auto. auto. }
+        apply bs_Lt_T with (za := za) (zb := zb). auto. auto. auto.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Lt. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Lt. auto. auto. }
+        apply bs_Lt_F with (za := za) (zb := zb). auto. auto. auto.
+  - intros. inversion H0.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Ge. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Ge. auto. auto. }
+        apply bs_Ge_T with (za := za) (zb := zb). auto. auto. auto.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Ge. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Ge. auto. auto. }
+        apply bs_Ge_F with (za := za) (zb := zb). auto. auto. auto.
+  - intros. inversion H0.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Gt. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Gt. auto. auto. }
+        apply bs_Gt_T with (za := za) (zb := zb). auto. auto. auto.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Gt. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Gt. auto. auto. }
+        apply bs_Gt_F with (za := za) (zb := zb). auto. auto. auto.
+  - intros. inversion H0.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Eq. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Eq. auto. auto. }
+        apply bs_Eq_T with (za := za) (zb := zb). auto. auto. auto.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Eq. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Eq. auto. auto. }
+        apply bs_Eq_F with (za := za) (zb := zb). auto. auto. auto.
+  - intros. inversion H0.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Ne. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Ne. auto. auto. }
+        apply bs_Ne_T with (za := za) (zb := zb). auto. auto. auto.
+      + assert (lH: [|e1|] s2 => (za)).
+        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Ne. auto. auto. }
+        assert (rH: [|e2|] s2 => (zb)).
+        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Ne. auto. auto. }
+        apply bs_Ne_F with (za := za) (zb := zb). auto. auto. auto.
+  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
+    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_And. auto. auto. }
+    assert (rH: [|e2|] s2 => (zb)).
+    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_And. auto. auto. }
+    auto.
+  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
+    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Or. auto. auto. }
+    assert (rH: [|e2|] s2 => (zb)).
+    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Or. auto. auto. }
+    auto.
+Qed.
