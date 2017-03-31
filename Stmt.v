@@ -1,3 +1,5 @@
+Add LoadPath "~/AU/Coq/coq-supplementary".
+
 Require Import List.
 Import ListNotations.
 Require Import Omega.
@@ -109,3 +111,65 @@ Proof.
   - intros. inversion H. inversion H2. apply bs_Seq with (c' := c'0).
     auto. apply bs_Seq with (c' := c'). auto. auto.
 Qed.
+
+(* CPS-style semantics *)
+Inductive cont : Type := 
+| KEmpty : cont
+| KStmt  : stmt -> cont.
+ 
+Definition Kapp (l r : cont) : cont :=
+  match (l, r) with
+  | (KStmt ls, KStmt rs) => KStmt (ls ;; rs)
+  | (KEmpty  , _       ) => r
+  | (_       , _       ) => l
+  end.
+
+Notation "'!' s" := (KStmt s) (at level 0).
+Notation "s1 @ s2" := (Kapp s1 s2) (at level 0).
+
+Reserved Notation "k '|-' c1 '--' s '-->' c2" (at level 0).
+
+Inductive cps_int : cont -> cont -> conf -> conf -> Prop :=
+| cps_Empty       : forall (c : conf), KEmpty |- c -- KEmpty --> c
+| cps_Skip        : forall (c c' : conf) (k : cont), 
+                      KEmpty |- c -- k --> c' -> 
+                      k |- c -- !SKIP --> c'
+| cps_Assn        : forall (s : state Z) (i o : list Z) (c' : conf) (k : cont) (x : id) (e : expr) (n : Z),
+                      [| e |] s => n ->
+                      KEmpty |- (s [x <- n], i, o) -- k --> c' ->
+                      k |- (s, i, o) -- !(x ::= e) --> c'
+| cps_Read        : forall (s : state Z) (i o : list Z) (c' : conf) (k : cont) (x : id) (z : Z),
+                      KEmpty |- (s [x <- z], i, o) -- k --> c' ->
+                      k |- (s, z::i, o) -- !(READ x) --> c'
+| cps_Write       : forall (s : state Z) (i o : list Z) (c' : conf) (k : cont) (e : expr) (z : Z),
+                      [| e |] s => z ->
+                      KEmpty |- (s, i, z::o) -- k --> c' ->
+                      k |- (s, i, o) -- !(WRITE e) --> c'
+| cps_Seq         : forall (c c' : conf) (k : cont) (s1 s2 : stmt), 
+                      !s2 @ k |- c -- !s1 --> c' ->
+                      k |- c -- !(s1 ;; s2) --> c'
+| cps_If_True     : forall (s : state Z) (i o : list Z) (c' : conf) (k : cont) (e : expr) (s1 s2 : stmt),
+                      [| e |] s => Z.one ->
+                      k |- (s, i, o) -- !s1 --> c' ->
+                      k |- (s, i, o) -- !(COND e THEN s1 ELSE s2 END) --> c'
+| cps_If_False    : forall (s : state Z) (i o : list Z) (c' : conf) (k : cont) (e : expr) (s1 s2 : stmt),
+                      [| e |] s => Z.zero ->
+                      k |- (s, i, o) -- !s2 --> c' ->
+                      k |- (s, i, o) -- !(COND e THEN s1 ELSE s2 END) --> c'
+| cps_While_True  : forall (st : state Z) (i o : list Z) (c' : conf) (k : cont) (e : expr) (s : stmt),
+                      [| e |] st => Z.one ->
+                      !(WHILE e DO s END) @ k |- (st, i, o) -- !s --> c' ->
+                      k |- (st, i, o) -- !(WHILE e DO s END) --> c'
+| cps_While_False : forall (st : state Z) (i o : list Z) (c' : conf) (k : cont) (e : expr) (s : stmt),
+                      [| e |] st => Z.zero ->
+                      KEmpty |- (st, i, o) -- k --> c' ->
+                      k |- (st, i, o) -- !(WHILE e DO s END) --> c'
+where "k |- c1 -- s --> c2" := (cps_int k s c1 c2).
+
+Lemma bs_int_to_cps_int: forall (st : state Z) (i o : list Z) (c' : conf) (s : stmt),
+  (st, i, o) == s ==> c' -> KEmpty |- (st, i, o) -- !s --> c'.
+Proof. admit. Admitted.
+
+Lemma cps_int_to_bs_int: forall (st : state Z) (i o : list Z) (c' : conf) (s : stmt),
+  KEmpty |- (st, i, o) -- !s --> c' -> (st, i, o) == s ==> c'.
+Proof. admit. Admitted.

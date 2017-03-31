@@ -1,5 +1,7 @@
 (** Based on Benjamin Pierce's "Software Foundations" *)
 
+Add LoadPath "~/AU/Coq/coq-supplementary".
+
 Require Import List.
 Import ListNotations.
 Require Import Omega.
@@ -73,6 +75,7 @@ Section S.
       rewrite mnH. apply st_binds_hd.
     - apply st_binds_tl. auto. auto.
   Qed.
+
 
   Lemma update_permute : forall (st : state) (x1 x2 x3 : id) (n1 n2 m : A),
     x2 <> x1 -> 

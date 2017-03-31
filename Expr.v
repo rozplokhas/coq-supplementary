@@ -1,3 +1,5 @@
+Add LoadPath "~/AU/Coq/coq-supplementary".
+
 Require Export BigZ.
 Require Export Id.
 Require Export State.
@@ -424,3 +426,99 @@ Proof.
     { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Or. auto. auto. }
     auto.
 Qed.
+
+(* Semantic equivalence *)
+Reserved Notation "e1 '~~' e2" (at level 42, no associativity).
+
+Inductive equivalent: expr -> expr -> Prop := 
+  eq_intro : forall (e1 e2 : expr), 
+               (forall (n : Z) (s : state Z), 
+                 [| e1 |] s => n <-> [| e2 |] s => n
+               ) -> e1 ~~ e2
+where "e1 '~~' e2" := (equivalent e1 e2).
+
+(* Semantic equivalence is an equivalence relation *)
+Lemma eq_refl: forall (e : expr), e ~~ e.
+Proof. admit. Admitted.
+
+Lemma eq_symm: forall (e1 e2 : expr), e1 ~~ e2 -> e2 ~~ e1.
+Proof. admit. Admitted.
+
+Lemma eq_trans: forall (e1 e2 e3 : expr), e1 ~~ e2 -> e2 ~~ e3 -> e1 ~~ e3.
+Proof. admit. Admitted.
+ 
+(* Contexts *)
+Inductive Context : Type :=
+  | Hole : Context
+  | AddL : Context -> expr -> Context
+  | SubL : Context -> expr -> Context
+  | MulL : Context -> expr -> Context
+  | DivL : Context -> expr -> Context
+  | ModL : Context -> expr -> Context
+  | LeL  : Context -> expr -> Context
+  | LtL  : Context -> expr -> Context
+  | GeL  : Context -> expr -> Context
+  | GtL  : Context -> expr -> Context
+  | EqL  : Context -> expr -> Context
+  | NeL  : Context -> expr -> Context
+  | AndL : Context -> expr -> Context
+  | OrL  : Context -> expr -> Context
+  | AddR : expr -> Context -> Context
+  | SubR : expr -> Context -> Context
+  | MulR : expr -> Context -> Context
+  | DivR : expr -> Context -> Context
+  | ModR : expr -> Context -> Context
+  | LeR  : expr -> Context -> Context
+  | LtR  : expr -> Context -> Context
+  | GeR  : expr -> Context -> Context
+  | GtR  : expr -> Context -> Context
+  | EqR  : expr -> Context -> Context
+  | NeR  : expr -> Context -> Context
+  | AndR : expr -> Context -> Context
+  | OrR  : expr -> Context -> Context.
+
+(* Plugging an expression into a context *)
+Fixpoint plug (C : Context) (e : expr) : expr := 
+  match C with
+  | Hole => e
+  | AddL C e1 => Add (plug C e) e1
+  | SubL C e1 => Sub (plug C e) e1
+  | MulL C e1 => Mul (plug C e) e1
+  | DivL C e1 => Div (plug C e) e1
+  | ModL C e1 => Mod (plug C e) e1
+  | LeL  C e1 => Le  (plug C e) e1
+  | LtL  C e1 => Lt  (plug C e) e1
+  | GeL  C e1 => Ge  (plug C e) e1
+  | GtL  C e1 => Gt  (plug C e) e1
+  | EqL  C e1 => Eq  (plug C e) e1
+  | NeL  C e1 => Ne  (plug C e) e1
+  | AndL C e1 => And (plug C e) e1
+  | OrL  C e1 => Or  (plug C e) e1
+  | AddR e1 C => Add e1 (plug C e)
+  | SubR e1 C => Sub e1 (plug C e)
+  | MulR e1 C => Mul e1 (plug C e)
+  | DivR e1 C => Div e1 (plug C e)
+  | ModR e1 C => Mod e1 (plug C e)
+  | LeR  e1 C => Le  e1 (plug C e)
+  | LtR  e1 C => Lt  e1 (plug C e)
+  | GeR  e1 C => Ge  e1 (plug C e)
+  | GtR  e1 C => Gt  e1 (plug C e)
+  | EqR  e1 C => Eq  e1 (plug C e)
+  | NeR  e1 C => Ne  e1 (plug C e)
+  | AndR e1 C => And e1 (plug C e)
+  | OrR  e1 C => Or  e1 (plug C e)
+  end.  
+
+Notation "C '<~' e" := (plug C e) (at level 43, no associativity).
+
+(* Contextual equivalence *)
+Reserved Notation "e1 '~c~' e2" (at level 42, no associativity).
+
+Inductive contextual_equivalent: expr -> expr -> Prop :=
+  ceq_intro : forall (e1 e2 : expr),
+                (forall (C : Context), (C <~ e1) ~~ (C <~ e2)) -> e1 ~c~ e2
+where "e1 '~c~' e2" := (contextual_equivalent e1 e2).
+
+(* Contextual equivalence is equivalent to the semantic one *)
+Lemma eq_eq_ceq: forall (e1 e2 : expr), e1 ~~ e2 <-> e1 ~c~ e2.
+Proof. admit. Admitted.
