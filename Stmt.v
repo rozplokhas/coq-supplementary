@@ -1,5 +1,3 @@
-Add LoadPath "~/AU/Coq/coq-supplementary".
-
 Require Import List.
 Import ListNotations.
 Require Import Omega.
@@ -90,33 +88,79 @@ Proof.
     + reflexivity.
 Qed.
 
-Lemma while_unfolding: forall (c c1 : conf) (e : expr) (s : stmt),
-  c == WHILE e DO s END ==> c1 <-> c == COND e THEN (s ;; WHILE e DO s END) ELSE SKIP END ==> c1.
-Proof.
-  intros. split.
-  - intros. inversion H.
-    + apply bs_If_True. auto. apply bs_Seq with (c' := c'). auto. auto.
-    + apply bs_If_False. auto. apply bs_Skip.
-  - intros. inversion H.
-    + inversion H6. apply bs_While_True with (c' := c'0). auto. auto. auto.
-    + inversion H6. apply bs_While_False. auto.
-Qed.
+Reserved Notation "s1 '~~~' s2" (at level 0).
 
-Lemma seq_associativity: forall (c c1 : conf) (s1 s2 s3 : stmt),
-  c == s1 ;; (s2 ;; s3) ==> c1 <-> c == (s1 ;; s2) ;; s3 ==> c1.
-Proof.
-  intros. split.
-  - intros. inversion H. inversion H5. apply bs_Seq with (c' := c'0).
-    apply bs_Seq with (c' := c'). auto. auto. auto.
-  - intros. inversion H. inversion H2. apply bs_Seq with (c' := c'0).
-    auto. apply bs_Seq with (c' := c'). auto. auto.
-Qed.
+Inductive bs_equivalent: stmt -> stmt -> Prop :=
+  bs_eq_intro: forall (s1 s2 : stmt), (forall (c c' : conf), (c == s1 ==> c' <-> c == s2 ==> c')) -> s1 ~~~ s2
+where "s1 '~~~' s2" := (bs_equivalent s1 s2).
+
+Module SmokeTest.
+
+  Lemma while_false : forall (e : expr) (s : stmt) (st : state Z) (i o : list Z) (c : conf),
+                        c == WHILE e DO s END ==> (st, i, o) -> [| e |] st => Z.zero.
+  Proof.
+    intros. remember (WHILE e DO s END) as instr. remember (st, i, o) as c'. induction H.
+    - inversion Heqinstr.
+    - inversion Heqinstr.
+    - inversion Heqinstr.
+    - inversion Heqinstr.
+    - inversion Heqinstr.
+    - inversion Heqinstr.
+    - inversion Heqinstr.
+    - inversion Heqinstr. apply IHbs_int2. auto. auto.
+    - inversion Heqinstr. inversion Heqc'. congruence.
+  Qed.
+
+  Definition X := Id 1.
+  Definition True := Nat 1.
+
+  Lemma loop_eq_undefined : (WHILE True DO SKIP END) ~~~ (WHILE True DO READ X END).
+  Proof.
+    assert (forall (s : stmt) (c c' : conf), ~ (c == WHILE True DO s END ==> c')) as WhileTrueDiverge.
+    { intros. intros H. remember (WHILE True DO s END). induction H.
+      - inversion Heqs0.
+      - inversion Heqs0.
+      - inversion Heqs0.
+      - inversion Heqs0.
+      - inversion Heqs0.
+      - inversion Heqs0.
+      - inversion Heqs0.
+      - inversion Heqs0. auto.
+      - inversion Heqs0. rewrite H1 in H. unfold True in H. inversion H. }
+    apply bs_eq_intro. intros. split.
+    - intros. exfalso. unfold not in WhileTrueDiverge. apply WhileTrueDiverge with SKIP c c'. auto.
+    - intros. exfalso. unfold not in WhileTrueDiverge. apply WhileTrueDiverge with (READ X) c c'. auto.
+  Qed.
+
+  Lemma while_unfolding: forall (e : expr) (s : stmt),
+    WHILE e DO s END ~~~ COND e THEN (s ;; WHILE e DO s END) ELSE SKIP END.
+  Proof.
+    intros. apply bs_eq_intro. intros. split.
+    - intros. inversion H.
+      + apply bs_If_True. auto. apply bs_Seq with (c' := c'0). auto. auto.
+      + apply bs_If_False. auto. apply bs_Skip.
+    - intros. inversion H.
+      + inversion H6. apply bs_While_True with (c' := c'1). auto. auto. auto.
+      + inversion H6. apply bs_While_False. auto.
+  Qed.
+
+  Lemma seq_associativity: forall (s1 s2 s3 : stmt),
+    (s1 ;; (s2 ;; s3)) ~~~ ((s1 ;; s2) ;; s3).
+  Proof.
+    intros. apply bs_eq_intro. intros. split.
+    - intros. inversion H. inversion H5. apply bs_Seq with (c' := c'1).
+      apply bs_Seq with (c' := c'0). auto. auto. auto.
+    - intros. inversion H. inversion H2. apply bs_Seq with (c' := c'1).
+      auto. apply bs_Seq with (c' := c'0). auto. auto.
+  Qed.
+
+End SmokeTest.
 
 (* CPS-style semantics *)
 Inductive cont : Type := 
 | KEmpty : cont
 | KStmt  : stmt -> cont.
- 
+
 Definition Kapp (l r : cont) : cont :=
   match (l, r) with
   | (KStmt ls, KStmt rs) => KStmt (ls ;; rs)

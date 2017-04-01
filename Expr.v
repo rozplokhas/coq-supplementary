@@ -1,5 +1,3 @@
-Add LoadPath "~/AU/Coq/coq-supplementary".
-
 Require Export BigZ.
 Require Export Id.
 Require Export State.
@@ -439,14 +437,23 @@ where "e1 '~~' e2" := (equivalent e1 e2).
 
 (* Semantic equivalence is an equivalence relation *)
 Lemma eq_refl: forall (e : expr), e ~~ e.
-Proof. admit. Admitted.
+Proof.
+  intros. apply eq_intro. intros. split. auto. auto. Qed.
 
 Lemma eq_symm: forall (e1 e2 : expr), e1 ~~ e2 -> e2 ~~ e1.
-Proof. admit. Admitted.
+Proof.
+  intros. inversion H. apply eq_intro. intros. split.
+  - intros. apply H0. auto.
+  - intros. apply H0. auto.
+Qed.
 
 Lemma eq_trans: forall (e1 e2 e3 : expr), e1 ~~ e2 -> e2 ~~ e3 -> e1 ~~ e3.
-Proof. admit. Admitted.
- 
+Proof.
+  intros. inversion H. inversion H0. apply eq_intro. intros. split.
+  + intros. apply H4. apply H1. auto.
+  + intros. apply H1. apply H4. auto.
+Qed.
+
 (* Contexts *)
 Inductive Context : Type :=
   | Hole : Context
@@ -507,7 +514,7 @@ Fixpoint plug (C : Context) (e : expr) : expr :=
   | NeR  e1 C => Ne  e1 (plug C e)
   | AndR e1 C => And e1 (plug C e)
   | OrR  e1 C => Or  e1 (plug C e)
-  end.  
+  end.
 
 Notation "C '<~' e" := (plug C e) (at level 43, no associativity).
 
@@ -521,4 +528,66 @@ where "e1 '~c~' e2" := (contextual_equivalent e1 e2).
 
 (* Contextual equivalence is equivalent to the semantic one *)
 Lemma eq_eq_ceq: forall (e1 e2 : expr), e1 ~~ e2 <-> e1 ~c~ e2.
-Proof. admit. Admitted.
+Proof.
+  intros. split.
+  - intros. inversion H. apply ceq_intro. intros. apply eq_intro. intros.
+    assert (T: forall (C : Context) (e1 e2 : expr) (s : state Z) (n : Z),
+                  (forall (m : Z) (s' : state Z), [|e1|] s' => (m) -> [|e2|] s' => (m)) ->
+                  [|C <~ e1|] s => (n) -> [|C <~ e2|] s => (n) ).
+    { clear. intros C. induction C.
+      - simpl. intros. auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s za H H3). apply bs_Le_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s za H H3). apply bs_Le_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s za H H3). apply bs_Lt_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s za H H3). apply bs_Lt_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s za H H3). apply bs_Ge_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s za H H3). apply bs_Ge_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s za H H3). apply bs_Gt_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s za H H3). apply bs_Gt_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s za H H3). apply bs_Eq_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s za H H3). apply bs_Eq_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s za H H3). apply bs_Ne_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s za H H3). apply bs_Ne_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H6). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H6). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H6). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H6). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H6). auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Le_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Le_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Lt_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Lt_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Ge_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Ge_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Gt_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Gt_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Eq_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Eq_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Ne_T with za zb. auto. auto. auto.
+        + remember (IHC e1 e2 s zb H H4). apply bs_Ne_F with za zb. auto. auto. auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H4). auto.
+      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H4). auto. }
+    split.
+    + intros. apply T with e1. intros. apply H0. auto. auto.
+    + intros. apply T with e2. intros. apply H0. auto. auto.
+  - intros. inversion H. remember (H0 Hole). auto.
+Qed.
