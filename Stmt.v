@@ -156,6 +156,27 @@ Module SmokeTest.
 
 End SmokeTest.
 
+Reserved Notation "s1 '~~~' s2" (at level 0).
+
+Inductive bs_equivalent: stmt -> stmt -> Prop :=
+  bs_eq_intro: forall (s1 s2 : stmt) (c c' : conf), (c == s1 ==> c' <-> c == s2 ==> c') -> s1 ~~~ s2
+where "s1 '~~~' s2" := (bs_equivalent s1 s2).
+
+Module SmokeTest.
+
+  Lemma while_false : forall (e : expr) (s : stmt) (st : state Z) (i o : list Z) (c : conf),
+                        c == WHILE e DO s END ==> (st, i, o) -> [| e |] st => Z.zero.
+  Proof. admit. Admitted.
+
+  Definition X := Id 1.
+  Definition Y := Id 2.
+  Definition True := Nat 1.
+
+  Lemma loop_eq_undefined : (WHILE True DO SKIP END) ~~~ (X ::= Var Y).
+  Proof. admit. Admitted.  
+  
+End SmokeTest.
+
 (* CPS-style semantics *)
 Inductive cont : Type := 
 | KEmpty : cont
