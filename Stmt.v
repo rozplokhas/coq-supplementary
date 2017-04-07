@@ -212,9 +212,42 @@ Inductive cps_int : cont -> cont -> conf -> conf -> Prop :=
                       k |- (st, i, o) -- !(WHILE e DO s END) --> c'
 where "k |- c1 -- s --> c2" := (cps_int k s c1 c2).
 
+Lemma bs_int_to_cps_int_segment: forall (c c' c'' : conf) (s : stmt) (k : cont),
+  c == s ==> c' -> KEmpty |- c' -- k --> c'' -> k |- c -- !s --> c''.
+Proof.
+  intros c c' c'' s k H. revert c'' k. induction H.
+  - intros. apply cps_Skip. assumption.
+  - intros. apply cps_Assn with z. assumption. assumption.
+  - intros. apply cps_Read. assumption.
+  - intros. apply cps_Write with z. assumption. assumption.
+  - intros. apply cps_Seq. apply IHbs_int1. unfold Kapp. destruct k.
+    + inversion H1. apply IHbs_int2. rewrite H5. apply cps_Empty.
+    + apply cps_Seq. unfold Kapp. apply IHbs_int2. assumption.
+  - intros. apply cps_If_True. assumption. apply IHbs_int. assumption.
+  - intros. apply cps_If_False. assumption. apply IHbs_int. assumption.
+  - intros. apply cps_While_True. assumption. apply IHbs_int1. unfold Kapp. destruct k.
+    + inversion H2. apply IHbs_int2. rewrite H6. apply cps_Empty.
+    + apply cps_Seq. unfold Kapp. apply IHbs_int2. assumption.
+  - intros. apply cps_While_False. assumption. assumption.
+Qed.
+
+
 Lemma bs_int_to_cps_int: forall (st : state Z) (i o : list Z) (c' : conf) (s : stmt),
   (st, i, o) == s ==> c' -> KEmpty |- (st, i, o) -- !s --> c'.
-Proof. admit. Admitted.
+Proof.
+  intros. induction H.
+  - apply cps_Skip. apply cps_Empty.
+  - apply cps_Assn with z. assumption. apply cps_Empty.
+  - apply cps_Read. apply cps_Empty.
+  - apply cps_Write with z. assumption. apply cps_Empty.
+  - apply cps_Seq. unfold Kapp. apply bs_int_to_cps_int_segment with c'.
+    assumption. assumption.
+  - apply cps_If_True. assumption. assumption.
+  - apply cps_If_False. assumption. assumption.
+  - apply cps_While_True. assumption. unfold Kapp. apply bs_int_to_cps_int_segment with c'.
+    assumption. assumption.
+  - apply cps_While_False. assumption. apply cps_Empty.
+Qed.
 
 Lemma bs_int_to_cps_int_gen: forall (c c' : conf) (s s_all : stmt) (k : cont),
   k |- c -- !s --> c' -> !s_all = !s @ k ->  c == s_all ==> c'.
