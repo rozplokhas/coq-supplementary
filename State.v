@@ -1,5 +1,7 @@
 (** Based on Benjamin Pierce's "Software Foundations" *)
 
+Add LoadPath "~/AU/Coq/coq-supplementary".
+
 Require Import List.
 Import ListNotations.
 Require Import Omega.

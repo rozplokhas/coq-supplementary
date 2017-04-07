@@ -1,3 +1,5 @@
+Add LoadPath "~/AU/Coq/coq-supplementary".
+
 Require Import List.
 Import ListNotations.
 Require Import Omega.
@@ -156,27 +158,6 @@ Module SmokeTest.
 
 End SmokeTest.
 
-Reserved Notation "s1 '~~~' s2" (at level 0).
-
-Inductive bs_equivalent: stmt -> stmt -> Prop :=
-  bs_eq_intro: forall (s1 s2 : stmt) (c c' : conf), (c == s1 ==> c' <-> c == s2 ==> c') -> s1 ~~~ s2
-where "s1 '~~~' s2" := (bs_equivalent s1 s2).
-
-Module SmokeTest.
-
-  Lemma while_false : forall (e : expr) (s : stmt) (st : state Z) (i o : list Z) (c : conf),
-                        c == WHILE e DO s END ==> (st, i, o) -> [| e |] st => Z.zero.
-  Proof. admit. Admitted.
-
-  Definition X := Id 1.
-  Definition Y := Id 2.
-  Definition True := Nat 1.
-
-  Lemma loop_eq_undefined : (WHILE True DO SKIP END) ~~~ (X ::= Var Y).
-  Proof. admit. Admitted.  
-  
-End SmokeTest.
-
 (* CPS-style semantics *)
 Inductive cont : Type := 
 | KEmpty : cont
@@ -235,6 +216,66 @@ Lemma bs_int_to_cps_int: forall (st : state Z) (i o : list Z) (c' : conf) (s : s
   (st, i, o) == s ==> c' -> KEmpty |- (st, i, o) -- !s --> c'.
 Proof. admit. Admitted.
 
+Lemma bs_int_to_cps_int_gen: forall (c c' : conf) (s s_all : stmt) (k : cont),
+  k |- c -- !s --> c' -> !s_all = !s @ k ->  c == s_all ==> c'.
+Proof.
+  intros c c' s s_all k H. revert s_all. induction H.
+  - unfold Kapp. intros. inversion H.
+  - unfold Kapp. destruct k.
+    + inversion H. intros. inversion H0. apply bs_Skip.
+    + intros. inversion H0. apply bs_Seq with c. apply bs_Skip. apply IHcps_int.
+      unfold Kapp. reflexivity.
+  - unfold Kapp. destruct k.
+    + inversion H0. intros. inversion H1. apply bs_Assign. assumption.
+    + intros. inversion H1. apply bs_Seq with ((s0) [x <- n], i, o).
+      apply bs_Assign. assumption. apply IHcps_int. unfold Kapp. reflexivity.
+  - unfold Kapp. destruct k.
+    + inversion H. intros. inversion H0. apply bs_Read.
+    + intros. inversion H0. apply bs_Seq with ((s0) [x <- z], i, o).
+      apply bs_Read. apply IHcps_int. unfold Kapp. reflexivity.
+  - unfold Kapp. destruct k.
+    + inversion H0. intros. inversion H1. apply bs_Write. assumption.
+    + intros. inversion H1. apply bs_Seq with (s0, i, z :: o).
+      apply bs_Write. assumption. apply IHcps_int. unfold Kapp. reflexivity.
+  - unfold Kapp. destruct k.
+    + intros. apply IHcps_int. unfold Kapp. apply H0.
+    + intros. inversion H0. assert ((c) == s1;; s2;; s0 ==> (c')).
+      { apply IHcps_int. unfold Kapp. reflexivity. }
+      inversion H1. inversion H8. apply bs_Seq with c'1.
+      * apply bs_Seq with c'0. assumption. assumption.
+      * assumption.
+  - unfold Kapp. destruct k.
+    + intros. inversion H1. apply bs_If_True. assumption. apply IHcps_int.
+      unfold Kapp. reflexivity.
+    + intros. inversion H1. assert ((s0, i, o) == s1 ;; s3 ==> c').
+      { auto. }
+      inversion H2. apply bs_Seq with c'0. apply bs_If_True.
+      assumption. assumption. assumption.
+  - unfold Kapp. destruct k.
+    + intros. inversion H1. apply bs_If_False. assumption. apply IHcps_int.
+      unfold Kapp. reflexivity.
+    + intros. inversion H1. assert ((s0, i, o) == s2 ;; s3 ==> c').
+      { auto. }
+      inversion H2. apply bs_Seq with c'0. apply bs_If_False.
+      assumption. assumption. assumption.
+  - unfold Kapp. destruct k.
+    + assert (((st, i, o)) == s0 ;; WHILE e DO s0 END ==> (c')).
+      { apply IHcps_int. unfold Kapp. reflexivity. }
+      intros. inversion H2. inversion H1. apply bs_While_True with c'0.
+      assumption. assumption. assumption.
+    + assert (((st, i, o)) == s0 ;; WHILE e DO s0 END ;; s1 ==> (c')).
+      { apply IHcps_int. unfold Kapp. reflexivity. }
+      inversion H1. inversion H7. intros. inversion H14. apply bs_Seq with c'1.
+      * apply bs_While_True with c'0. assumption. assumption. assumption.
+      * assumption.
+  - unfold Kapp. destruct k.
+    + inversion H0. intros. inversion H1. apply bs_While_False. assumption.
+    + intros. inversion H1. apply bs_Seq with (st, i, o).
+      * apply bs_While_False. assumption.
+      * apply IHcps_int. unfold Kapp. reflexivity.
+Qed.
+
 Lemma cps_int_to_bs_int: forall (st : state Z) (i o : list Z) (c' : conf) (s : stmt),
   KEmpty |- (st, i, o) -- !s --> c' -> (st, i, o) == s ==> c'.
-Proof. admit. Admitted.
+Proof. intros. apply bs_int_to_cps_int_gen with (s := s) (k := KEmpty).
+       assumption. auto. Qed.

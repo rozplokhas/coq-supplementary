@@ -1,3 +1,5 @@
+Add LoadPath "~/AU/Coq/coq-supplementary".
+
 Require Export BigZ.
 Require Export Id.
 Require Export State.
