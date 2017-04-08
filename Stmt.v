@@ -55,7 +55,6 @@ Inductive bs_int : stmt -> conf -> conf -> Prop :=
 where "c1 == s ==> c2" := (bs_int s c1 c2).
 
 (* Big-step semantics is deterministic *)
-(* Note: DB did not prove this yet     *)
 Lemma bs_int_deterministic : forall (c c1 c2 : conf) (s : stmt), c == s ==> c1 -> c == s ==> c2 -> c1 = c2.
 Proof.
   assert (zero_one_contra: forall (e : expr) (s : state Z) (P : Prop),
@@ -93,10 +92,33 @@ Qed.
 Reserved Notation "s1 '~~~' s2" (at level 0).
 
 Inductive bs_equivalent: stmt -> stmt -> Prop :=
-  bs_eq_intro: forall (s1 s2 : stmt), (forall (c c' : conf), (c == s1 ==> c' <-> c == s2 ==> c')) -> s1 ~~~ s2
+  bs_eq_intro: forall (s1 s2 : stmt), 
+                 (forall (c c' : conf), c == s1 ==> c' <-> c == s2 ==> c') -> s1 ~~~ s2
 where "s1 '~~~' s2" := (bs_equivalent s1 s2).
 
 Module SmokeTest.
+
+  Lemma seq_assoc : forall (s1 s2 s3 : stmt),
+                      ((s1 ;; s2) ;; s3) ~~~ (s1 ;; (s2 ;; s3)).
+  Proof.
+    intros. apply bs_eq_intro. intros. split.
+    - intros. inversion H. inversion H2. apply bs_Seq with (c' := c'1).
+      auto. apply bs_Seq with (c' := c'0). auto. auto.
+    - intros. inversion H. inversion H5. apply bs_Seq with (c' := c'1).
+      apply bs_Seq with (c' := c'0). auto. auto. auto.
+  Qed.
+
+  Lemma while_unfolds : forall (e : expr) (s : stmt),
+                          (WHILE e DO s END) ~~~ (COND e THEN s ;; WHILE e DO s END ELSE SKIP END).
+  Proof.
+    intros. apply bs_eq_intro. intros. split.
+    - intros. inversion H.
+      + apply bs_If_True. auto. apply bs_Seq with (c' := c'0). auto. auto.
+      + apply bs_If_False. auto. apply bs_Skip.
+    - intros. inversion H.
+      + inversion H6. apply bs_While_True with (c' := c'1). auto. auto. auto.
+      + inversion H6. apply bs_While_False. auto.
+  Qed.
 
   Lemma while_false : forall (e : expr) (s : stmt) (st : state Z) (i o : list Z) (c : conf),
                         c == WHILE e DO s END ==> (st, i, o) -> [| e |] st => Z.zero.
@@ -113,10 +135,7 @@ Module SmokeTest.
     - inversion Heqinstr. inversion Heqc'. congruence.
   Qed.
 
-  Definition X := Id 1.
-  Definition True := Nat 1.
-
-  Lemma loop_eq_undefined : (WHILE True DO SKIP END) ~~~ (WHILE True DO READ X END).
+  (* Lemma loop_eq_undefined : (WHILE True DO SKIP END) ~~~ (WHILE True DO READ X END).
   Proof.
     assert (forall (s : stmt) (c c' : conf), ~ (c == WHILE True DO s END ==> c')) as WhileTrueDiverge.
     { intros. intros H. remember (WHILE True DO s END). induction H.
@@ -132,31 +151,63 @@ Module SmokeTest.
     apply bs_eq_intro. intros. split.
     - intros. exfalso. unfold not in WhileTrueDiverge. apply WhileTrueDiverge with SKIP c c'. auto.
     - intros. exfalso. unfold not in WhileTrueDiverge. apply WhileTrueDiverge with (READ X) c c'. auto.
-  Qed.
+  Qed. *)
 
-  Lemma while_unfolding: forall (e : expr) (s : stmt),
-    WHILE e DO s END ~~~ COND e THEN (s ;; WHILE e DO s END) ELSE SKIP END.
-  Proof.
-    intros. apply bs_eq_intro. intros. split.
-    - intros. inversion H.
-      + apply bs_If_True. auto. apply bs_Seq with (c' := c'0). auto. auto.
-      + apply bs_If_False. auto. apply bs_Skip.
-    - intros. inversion H.
-      + inversion H6. apply bs_While_True with (c' := c'1). auto. auto. auto.
-      + inversion H6. apply bs_While_False. auto.
-  Qed.
+  Definition True := Nat 1.
 
-  Lemma seq_associativity: forall (s1 s2 s3 : stmt),
-    (s1 ;; (s2 ;; s3)) ~~~ ((s1 ;; s2) ;; s3).
+  Lemma loop_eq_undefined : (WHILE True DO SKIP END) ~~~ (COND (Nat 3) THEN SKIP ELSE SKIP END).
   Proof.
-    intros. apply bs_eq_intro. intros. split.
-    - intros. inversion H. inversion H5. apply bs_Seq with (c' := c'1).
-      apply bs_Seq with (c' := c'0). auto. auto. auto.
-    - intros. inversion H. inversion H2. apply bs_Seq with (c' := c'1).
-      auto. apply bs_Seq with (c' := c'0). auto. auto.
-  Qed.
+    constructor. intros. split.
+    - intros. exfalso. remember (WHILE True DO SKIP END). induction H.
+      + inversion Heqs.
+      + inversion Heqs.
+      + inversion Heqs.
+      + inversion Heqs.
+      + inversion Heqs.
+      + inversion Heqs.
+      + inversion Heqs.
+      + auto.
+      + inversion Heqs. rewrite H1 in H. inversion H.
+    - intros. inversion H.
+      + inversion H5.
+      + inversion H5.
+Qed.
 
 End SmokeTest.
+
+(* Contextual equivalence *)
+Inductive Context : Type :=
+| Hole 
+| SeqL   : Context -> stmt -> Context
+| SeqR   : stmt -> Context -> Context
+| IfThen : expr -> Context -> stmt -> Context
+| IfElse : expr -> stmt -> Context -> Context
+| WhileC : expr -> Context -> Context.
+
+(* Plugging a statement into a context *)
+Fixpoint plug (C : Context) (s : stmt) : stmt := 
+  match C with
+  | Hole => s
+  | SeqL     C  s1 => Seq (plug C s) s1
+  | SeqR     s1 C  => Seq s1 (plug C s) 
+  | IfThen e C  s1 => If e (plug C s) s1
+  | IfElse e s1 C  => If e s1 (plug C s)
+  | WhileC   e  C  => While e (plug C s)
+  end.  
+
+Notation "C '<~' e" := (plug C e) (at level 43, no associativity).
+
+(* Contextual equivalence *)
+Reserved Notation "e1 '~c~' e2" (at level 42, no associativity).
+
+Inductive contextual_equivalent: stmt -> stmt -> Prop :=
+  ceq_intro : forall (s1 s2 : stmt),
+                (forall (C : Context), (C <~ s1) ~~~ (C <~ s2)) -> s1 ~c~ s2
+where "s1 '~c~' s2" := (contextual_equivalent s1 s2).
+
+(* Contextual equivalence is equivalent to the semantic one *)
+Lemma eq_eq_ceq: forall (s1 s2 : stmt), s1 ~~~ s2 <-> s1 ~c~ s2.
+Proof. admit. Admitted.
 
 (* CPS-style semantics *)
 Inductive cont : Type := 
