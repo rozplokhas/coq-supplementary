@@ -135,24 +135,6 @@ Module SmokeTest.
     - inversion Heqinstr. inversion Heqc'. congruence.
   Qed.
 
-  (* Lemma loop_eq_undefined : (WHILE True DO SKIP END) ~~~ (WHILE True DO READ X END).
-  Proof.
-    assert (forall (s : stmt) (c c' : conf), ~ (c == WHILE True DO s END ==> c')) as WhileTrueDiverge.
-    { intros. intros H. remember (WHILE True DO s END). induction H.
-      - inversion Heqs0.
-      - inversion Heqs0.
-      - inversion Heqs0.
-      - inversion Heqs0.
-      - inversion Heqs0.
-      - inversion Heqs0.
-      - inversion Heqs0.
-      - inversion Heqs0. auto.
-      - inversion Heqs0. rewrite H1 in H. unfold True in H. inversion H. }
-    apply bs_eq_intro. intros. split.
-    - intros. exfalso. unfold not in WhileTrueDiverge. apply WhileTrueDiverge with SKIP c c'. auto.
-    - intros. exfalso. unfold not in WhileTrueDiverge. apply WhileTrueDiverge with (READ X) c c'. auto.
-  Qed. *)
-
   Definition True := Nat 1.
 
   Lemma loop_eq_undefined : (WHILE True DO SKIP END) ~~~ (COND (Nat 3) THEN SKIP ELSE SKIP END).
@@ -205,9 +187,123 @@ Inductive contextual_equivalent: stmt -> stmt -> Prop :=
                 (forall (C : Context), (C <~ s1) ~~~ (C <~ s2)) -> s1 ~c~ s2
 where "s1 '~c~' s2" := (contextual_equivalent s1 s2).
 
+(* Ltac siin h := simpl in h.
+
+Ltac rew h := rewrite h.
+
+Ltac rev_rew h := rewrite <- h.
+
+Ltac on_plug s t1 t2 :=
+  match goal with
+  | H: (_ = _ <~ s) |- _ => (t1 H; t2 H)
+  end. *)
+
+Lemma eq_to_ceq: forall (s1 s2 p1 p2 : stmt) (C : Context) (c c' : conf),
+  c == p1 ==> c' -> p1 = C <~ s1 -> p2 = C <~ s2 ->
+    (forall (c0 c1 : conf), c0 == s1 ==> c1 -> c0 == s2 ==> c1) -> c == p2 ==> c'.
+Proof.
+  intros s1 s2 p1 p2 C c c' H. revert s1 s2 p2 C. induction H.
+  - intros. destruct C.
+    + (match goal with H: (p2 = _ <~ _) |- _ => simpl in H; rewrite H end).
+      (match goal with H: (forall _ _ : conf, _ -> _) |- _ => apply H end).
+      (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; rewrite <- H end).
+      constructor.
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+  - intros. destruct C.
+    + (match goal with H: (p2 = _ <~ _) |- _ => simpl in H; rewrite H end).
+      (match goal with H: (forall _ _ : conf, _ -> _) |- _ => apply H end).
+      (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; rewrite <- H end).
+      constructor. assumption.
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+  - intros. destruct C.
+    + (match goal with H: (p2 = _ <~ _) |- _ => simpl in H; rewrite H end).
+      (match goal with H: (forall _ _ : conf, _ -> _) |- _ => apply H end).
+      (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; rewrite <- H end).
+      constructor.
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+  - intros. destruct C.
+    + (match goal with H: (p2 = _ <~ _) |- _ => simpl in H; rewrite H end).
+      (match goal with H: (forall _ _ : conf, _ -> _) |- _ => apply H end).
+      (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; rewrite <- H end).
+      constructor. assumption.
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+    + (match goal with H: (_ = _ <~ s1) |- _ => simpl in H; inversion H end).
+  - intros. destruct C.
+    + simpl in H2. rewrite H2. apply H3. simpl in H1. rewrite <- H1. apply bs_Seq with c'; assumption.
+    + simpl in H2. rewrite H2. simpl in H1. inversion H1. apply bs_Seq with c'.
+      * apply IHbs_int1 with (s2 := s0) (s3 := s3) (C := C); auto.
+      * congruence.
+    + simpl in H2. rewrite H2. simpl in H1. inversion H1. apply bs_Seq with c'.
+      * congruence.
+      * apply IHbs_int2 with (s1 := s0) (s3 := s3) (C := C); auto.
+    + simpl in H1. inversion H1.
+    + simpl in H1. inversion H1.
+    + simpl in H1. inversion H1.
+  - intros. destruct C.
+    + simpl in H2. rewrite H2. apply H3. simpl in H1. rewrite <- H1. apply bs_If_True; assumption.
+    + simpl in H1. inversion H1.
+    + simpl in H1. inversion H1.
+    + simpl in H2. rewrite H2. simpl in H1. inversion H1. apply bs_If_True.
+      * congruence.
+      * apply IHbs_int with (s2 := s0) (s3 := s3) (C := C); auto.
+    + simpl in H2. rewrite H2. simpl in H1. inversion H1. apply bs_If_True; congruence.
+    + simpl in H1. inversion H1.
+  - intros. destruct C.
+    + simpl in H2. rewrite H2. apply H3. simpl in H1. rewrite <- H1. apply bs_If_False; assumption.
+    + simpl in H1. inversion H1.
+    + simpl in H1. inversion H1.
+    + simpl in H2. rewrite H2. simpl in H1. inversion H1. apply bs_If_False; congruence.
+    + simpl in H2. rewrite H2. simpl in H1. inversion H1. apply bs_If_False.
+      * congruence.
+      * apply IHbs_int with (s1 := s0) (s3 := s3) (C := C); auto.
+    + simpl in H1. inversion H1.
+  - intros. destruct C.
+    + simpl in H3. rewrite H3. apply H4. simpl in H2. rewrite <- H2. apply bs_While_True with c'; assumption.
+    + simpl in H2. inversion H2.
+    + simpl in H2. inversion H2.
+    + simpl in H2. inversion H2.
+    + simpl in H2. inversion H2.
+    + simpl in H3. rewrite H3. simpl in H2. inversion H2. apply bs_While_True with c'.
+      * congruence.
+      * apply IHbs_int1 with (s1 := s1) (s2 := s2) (C := C); auto.
+      * apply IHbs_int2 with (s1 := s1) (s2 := s2) (C := WhileC e C).
+        { simpl. congruence. }
+        { simpl. congruence. }
+        { auto. }
+  - intros. destruct C.
+    + simpl in H1. rewrite H1. apply H2. simpl in H0. rewrite <- H0. apply bs_While_False; assumption.
+    + simpl in H0. inversion H0.
+    + simpl in H0. inversion H0.
+    + simpl in H0. inversion H0.
+    + simpl in H0. inversion H0.
+    + simpl in H1. rewrite H1. simpl in H0. inversion H0. apply bs_While_False; congruence.
+Qed.
+
 (* Contextual equivalence is equivalent to the semantic one *)
 Lemma eq_eq_ceq: forall (s1 s2 : stmt), s1 ~~~ s2 <-> s1 ~c~ s2.
-Proof. admit. Admitted.
+Proof.
+  intros. split.
+  - intros. inversion_clear H. constructor. intros.
+    constructor. intros. split.
+    + intros. apply eq_to_ceq with s1 s2 (C <~ s1) C; auto. apply H0.
+    + intros. apply eq_to_ceq with s2 s1 (C <~ s2) C; auto. apply H0.
+  - intros. inversion_clear H. apply (H0 Hole).
+Qed.
 
 (* CPS-style semantics *)
 Inductive cont : Type := 
@@ -286,18 +382,7 @@ Qed.
 Lemma bs_int_to_cps_int: forall (st : state Z) (i o : list Z) (c' : conf) (s : stmt),
   (st, i, o) == s ==> c' -> KEmpty |- (st, i, o) -- !s --> c'.
 Proof.
-  intros. induction H.
-  - apply cps_Skip. apply cps_Empty.
-  - apply cps_Assn with z. assumption. apply cps_Empty.
-  - apply cps_Read. apply cps_Empty.
-  - apply cps_Write with z. assumption. apply cps_Empty.
-  - apply cps_Seq. unfold Kapp. apply bs_int_to_cps_int_segment with c'.
-    assumption. assumption.
-  - apply cps_If_True. assumption. assumption.
-  - apply cps_If_False. assumption. assumption.
-  - apply cps_While_True. assumption. unfold Kapp. apply bs_int_to_cps_int_segment with c'.
-    assumption. assumption.
-  - apply cps_While_False. assumption. apply cps_Empty.
+  intros. apply bs_int_to_cps_int_segment with c'. assumption. constructor.
 Qed.
 
 Lemma bs_int_to_cps_int_gen: forall (c c' : conf) (s s_all : stmt) (k : cont),
