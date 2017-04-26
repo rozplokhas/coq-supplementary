@@ -137,34 +137,21 @@ Inductive V : expr -> id -> Prop :=
 | v_Or  : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [\/] b)
 where "x ? e" := (V e x).
 
+Ltac destruct_disj :=
+  match goal with 
+  | H: (_ \/ _) |- _ => destruct H 
+  end.
+
 (* If an expression is defined in some state, then each its' variable is
    defined in that state
 *)
 Lemma defined_expression: forall (e : expr) (s : state Z) (z : Z) (id : id),
   [| e |] s => z -> id ? e -> exists z', s / id => z'.
 Proof.
-  intros e s z id H. induction H.
-  - intros contra. inversion contra.
-  - intros iH. inversion iH. exists z. rewrite <- H0. apply H.
-  - intros H'. inversion H'. destruct H4. auto. auto.
-  - intros H'. inversion H'. destruct H4. auto. auto.
-  - intros H'. inversion H'. destruct H4. auto. auto.
-  - intros H'. inversion H'. destruct H4. auto. auto.
-  - intros H'. inversion H'. destruct H4. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H5. auto. auto.
-  - intros H'. inversion H'. destruct H6. auto. auto.
-  - intros H'. inversion H'. destruct H6. auto. auto.
+  intros e s z id H. induction H;
+  intros H'; inversion H'; solve
+  [ exists z; rewrite <- H0; apply H
+  | destruct_disj; auto ].
 Qed.
 
 (* If a variable in expression is undefined in some state, then the expression
@@ -173,139 +160,34 @@ Qed.
 Lemma undefined_variable: forall (e : expr) (s : state Z) (id : id),
   id ? e -> (forall (z : Z), ~ (s / id => z)) -> (forall (z : Z), ~ ([| e |] s => z)).
 Proof.
-  intros e s id. unfold not. induction e.
-  - intros H. inversion H.
-  - intros iH. inversion iH. intros nH z H. inversion H.
-    remember (nH z) as contra. contradiction.
-  - intros. inversion H1. inversion H. destruct H11.
-    + apply IHe1 with (z := za). auto. auto. auto.
-    + apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1. inversion H. destruct H11.
-    + apply IHe1 with (z := za). auto. auto. auto.
-    + apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1. inversion H. destruct H11.
-    + apply IHe1 with (z := za). auto. auto. auto.
-    + apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1. inversion H. destruct H11.
-    + apply IHe1 with (z := za). auto. auto. auto.
-    + apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1. inversion H. destruct H11.
-    + apply IHe1 with (z := za). auto. auto. auto.
-    + apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-    + inversion H. destruct H12.
-      * apply IHe1 with (z := za). auto. auto. auto.
-      * apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1. inversion H. destruct H13.
-    + apply IHe1 with (z := za). auto. auto. auto.
-    + apply IHe2 with (z := zb). auto. auto. auto.
-  - intros. inversion H1. inversion H. destruct H13.
-    + apply IHe1 with (z := za). auto. auto. auto.
-    + apply IHe2 with (z := zb). auto. auto. auto.
+  unfold not; intros e s id; induction e; solve
+  [ intros H; inversion H
+  | intros iH; inversion iH; intros nH z H; inversion H;
+    remember (nH z) as contra; contradiction
+  | intros; inversion H1; inversion H; destruct_disj;
+    [ apply IHe1 with (z := za); auto
+    | apply IHe2 with (z := zb); auto ]
+  | intros; inversion H1;
+    inversion H; destruct_disj; solve
+    [ apply IHe1 with (z := za); auto
+    | apply IHe2 with (z := zb); auto ] ].
 Qed.
 
 (* The evaluation relation is deterministic *)
 Lemma bs_eval_deterministic: forall (e : expr) (s : state Z) (z1 z2 : Z),
   [| e |] s => z1 -> [| e |] s => z2 -> z1 = z2.
 Proof.
-  intros e s. induction e.
-  - intros. inversion H. inversion H0. reflexivity.
-  - intros. inversion H. inversion H0. apply state_deterministic with (st := s) (x := i).
-    auto. auto.
-  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
-    reflexivity. auto. auto.
-  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
-    reflexivity. auto. auto.
-  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
-    reflexivity. auto. auto.
-  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
-    reflexivity. auto. auto.
-  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
-    reflexivity. auto. auto.
-  - intros. inversion H.
-    + inversion H0.
-      * reflexivity.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
-    + inversion H0.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
-      * reflexivity.
-  - intros. inversion H.
-    + inversion H0.
-      * reflexivity.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
-    + inversion H0.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
-      * reflexivity.
-  - intros. inversion H.
-    + inversion H0.
-      * reflexivity.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
-    + inversion H0.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
-      * reflexivity.
-  - intros. inversion H.
-    + inversion H0.
-      * reflexivity.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
-    + inversion H0.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. omega.
-      * reflexivity.
-  - intros. inversion H.
-    + inversion H0.
-      * reflexivity.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. congruence.
-    + inversion H0.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. congruence.
-      * reflexivity.
-  - intros. inversion H.
-    + inversion H0.
-      * reflexivity.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. congruence.
-    + inversion H0.
-      * assert (eq_a: za = za0). auto. assert (eq_b: zb = zb0). auto. congruence.
-      * reflexivity.
-  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
-    reflexivity. auto. auto.
-  - intros. inversion H. inversion H0. replace za0 with za. replace zb0 with zb.
-    reflexivity. auto. auto.
+  intros e s; induction e; solve
+  [ intros; inversion H; inversion H0; reflexivity
+  | intros; inversion H; inversion H0;
+    apply state_deterministic with (st := s) (x := i); auto
+  | intros; inversion H; inversion H0; replace za0 with za;
+    [ replace zb0 with zb; auto
+    | auto                      ]
+  | intros; inversion H; inversion H0; solve
+    [ reflexivity
+    | assert (eq_a: za = za0); auto;
+      assert (eq_b: zb = zb0); auto; solve [ congruence | omega ] ] ].
 Qed.
 
 (* Equivalence of states w.r.t. an identifier *)
