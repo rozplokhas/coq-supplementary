@@ -4,116 +4,102 @@ Require Export BigZ.
 Require Export Id.
 Require Export State.
 
-(* Type of arithmetic expressions *)
-Inductive expr : Type :=
-  | Nat : nat  -> expr
-  | Var : id   -> expr
-  | Add : expr -> expr -> expr
-  | Sub : expr -> expr -> expr
-  | Mul : expr -> expr -> expr
-  | Div : expr -> expr -> expr
-  | Mod : expr -> expr -> expr
-  | Le  : expr -> expr -> expr
-  | Lt  : expr -> expr -> expr
-  | Ge  : expr -> expr -> expr
-  | Gt  : expr -> expr -> expr
-  | Eq  : expr -> expr -> expr
-  | Ne  : expr -> expr -> expr
-  | And : expr -> expr -> expr
-  | Or  : expr -> expr -> expr.
-
-(* Supplementary notation *)
-Notation "x '[+]'  y" := (Add x y) (at level 40, left associativity).
-Notation "x '[-]'  y" := (Sub x y) (at level 40, left associativity).
-Notation "x '[*]'  y" := (Mul x y) (at level 41, left associativity).
-Notation "x '[/]'  y" := (Div x y) (at level 41, left associativity).
-Notation "x '[%]'  y" := (Mod x y) (at level 41, left associativity).
-Notation "x '[<=]' y" := (Le  x y) (at level 39, no associativity).
-Notation "x '[<]'  y" := (Lt  x y) (at level 39, no associativity).
-Notation "x '[>=]' y" := (Ge  x y) (at level 39, no associativity).
-Notation "x '[>]'  y" := (Gt  x y) (at level 39, no associativity).
-Notation "x '[==]' y" := (Eq  x y) (at level 39, no associativity).
-Notation "x '[/=]' y" := (Ne  x y) (at level 39, no associativity).
-Notation "x '[&]'  y" := (And x y) (at level 38, left associativity).
-Notation "x '[\/]' y" := (Or  x y) (at level 38, left associativity).
+(* Type of binary operators *)
+Inductive bop : Type :=
+| Add : bop
+| Sub : bop
+| Mul : bop
+| Div : bop
+| Mod : bop
+| Le  : bop
+| Lt  : bop
+| Ge  : bop
+| Gt  : bop
+| Eq  : bop
+| Ne  : bop
+| And : bop
+| Or  : bop.
 
 Definition zbool (x : Z) : Prop := x = Z.one \/ x = Z.zero.
 
-Definition zor (x y : Z) : Z :=
-  if Z_le_gt_dec (Z.of_nat 1) (x + y) then Z.one else Z.zero.
+Inductive bop_eval : bop -> Z -> Z -> Z -> Prop :=
+  bop_Add : forall (za zb : Z), bop_eval Add za zb (za + zb)
+| bop_Sub : forall (za zb : Z), bop_eval Sub za zb (za - zb)
+| bop_Mul : forall (za zb : Z), bop_eval Mul za zb (za * zb)
+| bop_Div : forall (za zb : Z), bop_eval Div za zb (Z.div za zb)
+| bop_Mod : forall (za zb : Z), bop_eval Mod za zb (Z.modulo za zb)
+| bop_Le_T : forall (za zb : Z), Z.le za zb -> bop_eval Le za zb Z.one
+| bop_Le_F : forall (za zb : Z), Z.gt za zb -> bop_eval Le za zb Z.zero
+| bop_Lt_T : forall (za zb : Z), Z.lt za zb -> bop_eval Lt za zb Z.one
+| bop_Lt_F : forall (za zb : Z), Z.ge za zb -> bop_eval Lt za zb Z.zero
+| bop_Ge_T : forall (za zb : Z), Z.ge za zb -> bop_eval Ge za zb Z.one
+| bop_Ge_F : forall (za zb : Z), Z.lt za zb -> bop_eval Ge za zb Z.zero
+| bop_Gt_T : forall (za zb : Z), Z.gt za zb -> bop_eval Gt za zb Z.one
+| bop_Gt_F : forall (za zb : Z), Z.le za zb -> bop_eval Gt za zb Z.zero
+| bop_Eq_T : forall (za zb : Z), Z.eq za zb -> bop_eval Eq za zb Z.one
+| bop_Eq_F : forall (za zb : Z), ~ Z.eq za zb -> bop_eval Eq za zb Z.zero
+| bop_Ne_T : forall (za zb : Z), ~ Z.eq za zb -> bop_eval Ne za zb Z.one
+| bop_Ne_F : forall (za zb : Z), Z.eq za zb -> bop_eval Ne za zb Z.zero
+| bop_And : forall (za zb : Z), zbool za -> zbool zb -> bop_eval And za zb (za * zb)
+| bop_Or : forall (za zb : Z), zbool za -> zbool zb -> bop_eval Or za zb (1 - (1 - za) * (1 - zb)).
+
+(* Type of arithmetic expressions *)
+Inductive expr : Type :=
+(* | Nat : nat -> expr *)
+| Const : Z -> expr
+| Var : id  -> expr
+| Bop : bop -> expr -> expr -> expr.
+
+(* Supplementary notation *)
+Notation "x '[+]'  y" := (Bop Add x y) (at level 40, left associativity).
+Notation "x '[-]'  y" := (Bop Sub x y) (at level 40, left associativity).
+Notation "x '[*]'  y" := (Bop Mul x y) (at level 41, left associativity).
+Notation "x '[/]'  y" := (Bop Div x y) (at level 41, left associativity).
+Notation "x '[%]'  y" := (Bop Mod x y) (at level 41, left associativity).
+Notation "x '[<=]' y" := (Bop Le  x y) (at level 39, no associativity).
+Notation "x '[<]'  y" := (Bop Lt  x y) (at level 39, no associativity).
+Notation "x '[>=]' y" := (Bop Ge  x y) (at level 39, no associativity).
+Notation "x '[>]'  y" := (Bop Gt  x y) (at level 39, no associativity).
+Notation "x '[==]' y" := (Bop Eq  x y) (at level 39, no associativity).
+Notation "x '[/=]' y" := (Bop Ne  x y) (at level 39, no associativity).
+Notation "x '[&]'  y" := (Bop And x y) (at level 38, left associativity).
+Notation "x '[\/]' y" := (Bop Or  x y) (at level 38, left associativity).
 
 Reserved Notation "[| e |] st => z" (at level 0).
 Notation "st / x => y" := (st_binds Z st x y) (at level 0).
 
 (* Big-step evaluation relation *)
-Inductive bs_eval : expr -> state Z -> Z -> Prop := 
-  bs_Nat  : forall (s : state Z) (n : nat), [| Nat n |] s => (Z.of_nat n)
+Inductive bs_eval : expr -> state Z -> Z -> Prop :=
+(*  bs_Nat  : forall (s : state Z) (n : nat), [| Nat n |] s => (Z.of_nat n) *)
+  bs_Const  : forall (s : state Z) (z : Z), [| Const z |] s => z
 | bs_Var  : forall (s : state Z) (i : id) (z : Z), s / i => z -> [| Var i |] s => z
-
-| bs_Add  : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> [| a [+] b |] s => (za + zb)
-| bs_Sub  : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> [| a [-] b |] s => (za - zb)
-| bs_Mul  : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> [| a [*] b |] s => (za * zb)
-| bs_Div  : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> [| a [/] b |] s => (Z.div za zb)
-| bs_Mod  : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> [| a [%] b |] s => (Z.modulo za zb)
-
-| bs_Le_T : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> Z.le za zb -> [| a [<=] b |] s => Z.one
-| bs_Le_F : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> Z.gt za zb -> [| a [<=] b |] s => Z.zero
-
-| bs_Lt_T : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> Z.lt za zb -> [| a [<] b |] s => Z.one
-| bs_Lt_F : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> Z.ge za zb -> [| a [<] b |] s => Z.zero
-
-| bs_Ge_T : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> Z.ge za zb -> [| a [>=] b |] s => Z.one
-| bs_Ge_F : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> Z.lt za zb -> [| a [>=] b |] s => Z.zero
-
-| bs_Gt_T : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> Z.gt za zb -> [| a [>] b |] s => Z.one
-| bs_Gt_F : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> Z.le za zb -> [| a [>] b |] s => Z.zero
-
-| bs_Eq_T : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> Z.eq za zb -> [| a [==] b |] s => Z.one
-| bs_Eq_F : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> ~ Z.eq za zb -> [| a [==] b |] s => Z.zero
-
-| bs_Ne_T : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> ~ Z.eq za zb -> [| a [/=] b |] s => Z.one
-| bs_Ne_F : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> Z.eq za zb -> [| a [/=] b |] s => Z.zero
-
-| bs_And  : forall (s : state Z) (a b : expr) (za zb : Z), 
-             [| a |] s => za -> [| b |] s => zb -> zbool za -> zbool zb -> [| a [&] b |] s => (za * zb)
-
-| bs_Or   : forall (s : state Z) (a b : expr) (za zb : Z), 
-              [| a |] s => za -> [| b |] s => zb -> zbool za -> zbool zb -> [| a [\/] b |] s => (zor za zb)
-where "[| e |] st => z" := (bs_eval e st z). 
+| bs_Bop  : forall (s : state Z) (op : bop) (a b : expr) (za zb zr : Z),
+             [| a |] s => za -> [| b |] s => zb -> bop_eval op za zb zr -> [| Bop op a b |] s => zr
+where "[| e |] st => z" := (bs_eval e st z).
 
 Hint Constructors bs_eval.
 
 Module SmokeTest.
 
   Lemma nat_always :
-    forall (n : nat) (s : state Z), [| Nat n |] s => (Z.of_nat n).
+    (* forall (n : nat) (s : state Z), [| Nat n |] s => (Z.of_nat n). *)
+    forall (z : Z) (s : state Z), [| Const z |] s => z.
   Proof. auto. Qed.
 
   Lemma double_and_sum : 
-    forall (s : state Z) (e : expr) (z : Z), 
-      [| e [*] (Nat 2) |] s => z -> [| e [+] e |] s => z.
+    forall (s : state Z) (e : expr) (z : Z),
+      (* [| e [*] (Nat 2) |] s => z -> [| e [+] e |] s => z. *)
+      [| e [*] (Const 2) |] s => z -> [| e [+] e |] s => z.
   Proof.
-    intros s e z H. inversion H. inversion H5.
-    replace (Z.mul za (Z.of_nat 2)) with (Z.add za za).
-    - apply bs_Add. auto. auto.
-    - simpl. omega. Qed.
+    intros s e z H. inversion_clear H. inversion_clear H2. inversion_clear H1.
+    econstructor.
+    - eassumption.
+    - eassumption.
+    - (* replace (Z.mul za (Z.of_nat 2)) with (Z.add za za). *)
+      replace (Z.mul za 2) with (Z.add za za).
+      + constructor.
+      + simpl. omega.
+  Qed.
 
 End SmokeTest.
 
@@ -122,24 +108,12 @@ Reserved Notation "x ? e" (at level 0).
 (* Set of variables is an expression *)
 Inductive V : expr -> id -> Prop := 
   v_Var : forall (id : id), id ? (Var id)
-| v_Add : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [+]  b)
-| v_Sub : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [-]  b)
-| v_Mul : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [*]  b)
-| v_Div : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [/]  b)
-| v_Mod : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [%]  b)
-| v_Le  : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [<=] b)
-| v_Lt  : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [<]  b)
-| v_Ge  : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [>=] b)
-| v_Gt  : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [>]  b)
-| v_Eq  : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [==] b)
-| v_Ne  : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [/=] b)
-| v_And : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [&]  b)
-| v_Or  : forall (id : id) (a b : expr), id ? a \/ id ? b -> id ? (a [\/] b)
+| v_Bop : forall (id : id) (a b : expr) (op : bop), id ? a \/ id ? b -> id ? (Bop op a b)
 where "x ? e" := (V e x).
 
 Ltac destruct_disj :=
   match goal with 
-  | H: (_ \/ _) |- _ => destruct H 
+  | H: (_ \/ _) |- _ => destruct H
   end.
 
 (* If an expression is defined in some state, then each its' variable is
@@ -148,7 +122,7 @@ Ltac destruct_disj :=
 Lemma defined_expression: forall (e : expr) (s : state Z) (z : Z) (id : id),
   [| e |] s => z -> id ? e -> exists z', s / id => z'.
 Proof.
-  intros e s z id H. induction H;
+  intros e s z id H; induction H;
   intros H'; inversion H'; solve
   [ exists z; rewrite <- H0; apply H
   | destruct_disj; auto ].
@@ -177,136 +151,54 @@ Qed.
 Lemma bs_eval_deterministic: forall (e : expr) (s : state Z) (z1 z2 : Z),
   [| e |] s => z1 -> [| e |] s => z2 -> z1 = z2.
 Proof.
-  intros e s; induction e; solve
-  [ intros; inversion H; inversion H0; reflexivity
-  | intros; inversion H; inversion H0;
-    apply state_deterministic with (st := s) (x := i); auto
-  | intros; inversion H; inversion H0; replace za0 with za;
-    [ replace zb0 with zb; auto
-    | auto                      ]
-  | intros; inversion H; inversion H0; solve
-    [ reflexivity
-    | assert (eq_a: za = za0); auto;
-      assert (eq_b: zb = zb0); auto; solve [ congruence | omega ] ] ].
+  intros e s; induction e; intros; inversion H; inversion H0.
+  - congruence. (* reflexivity. *)
+  - eapply state_deterministic; eauto.
+  - assert (bop_det: forall (b : bop) (za zb z1 z2 : Z),
+        bop_eval b za zb z1 -> bop_eval b za zb z2 -> z1 = z2);
+    [ clear; intros; inversion H; solve
+      [ match goal with H: (_ = b) |- _ => rewrite <- H in H0 end; inversion H0; reflexivity
+      | match goal with H: (_ = b) |- _ => rewrite <- H in H0 end; inversion H0; solve
+        [ reflexivity
+        | omega 
+        | contradiction ] ]
+    | eapply bop_det; eauto;
+      assert (eq_a: za = za0);
+      [ apply IHe1; auto; auto
+      | assert (eq_b: zb = zb0);
+        [ apply IHe2; auto; auto
+        | congruence ] ] ].
 Qed.
 
 (* Equivalence of states w.r.t. an identifier *)
 Definition equivalent_states (s1 s2 : state Z) (id : id) :=
-  forall z :Z, s1 /id => z <-> s2 / id => z.
+  forall z :Z, s1 / id => z <-> s2 / id => z.
+
+Ltac inversion_eval :=
+  match goal with
+  | H: ([| _ |] _ => _) |- _ => inversion_clear H
+  end.
 
 (* The result of expression evaluation in a state dependes only on the values
    of occurring variables
 *)
 Lemma variable_relevance: forall (e : expr) (s1 s2 : state Z) (z : Z),
-  (forall (id : id) (z : Z), id ? e -> equivalent_states s1 s2 id) -> 
+  (forall (id : id), id ? e -> equivalent_states s1 s2 id) -> 
   [| e |] s1 => z -> [| e |] s2 => z.
 Proof.
-  intros e s1 s2. induction e.
-  - intros z _ H. inversion H. auto.
-  - intros z eqH H. assert (equi: equivalent_states s1 s2 i).
-    { apply eqH. apply (Z.of_nat 42). apply v_Var. } unfold equivalent_states in equi.
-    apply bs_Var. apply equi. inversion H. auto.
-  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
-    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Add. auto. auto. }
-    assert (rH: [|e2|] s2 => (zb)).
-    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Add. auto. auto. }
-    auto.
-  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
-    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Sub. auto. auto. }
-    assert (rH: [|e2|] s2 => (zb)).
-    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Sub. auto. auto. }
-    auto.
-  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
-    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Mul. auto. auto. }
-    assert (rH: [|e2|] s2 => (zb)).
-    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Mul. auto. auto. }
-    auto.
-  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
-    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Div. auto. auto. }
-    assert (rH: [|e2|] s2 => (zb)).
-    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Div. auto. auto. }
-    auto.
-  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
-    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Mod. auto. auto. }
-    assert (rH: [|e2|] s2 => (zb)).
-    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Mod. auto. auto. }
-    auto.
-  - intros. inversion H0.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Le. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Le. auto. auto. }
-        apply bs_Le_T with (za := za) (zb := zb). auto. auto. auto.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Le. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Le. auto. auto. }
-        apply bs_Le_F with (za := za) (zb := zb). auto. auto. auto.
-  - intros. inversion H0.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Lt. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Lt. auto. auto. }
-        apply bs_Lt_T with (za := za) (zb := zb). auto. auto. auto.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Lt. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Lt. auto. auto. }
-        apply bs_Lt_F with (za := za) (zb := zb). auto. auto. auto.
-  - intros. inversion H0.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Ge. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Ge. auto. auto. }
-        apply bs_Ge_T with (za := za) (zb := zb). auto. auto. auto.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Ge. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Ge. auto. auto. }
-        apply bs_Ge_F with (za := za) (zb := zb). auto. auto. auto.
-  - intros. inversion H0.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Gt. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Gt. auto. auto. }
-        apply bs_Gt_T with (za := za) (zb := zb). auto. auto. auto.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Gt. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Gt. auto. auto. }
-        apply bs_Gt_F with (za := za) (zb := zb). auto. auto. auto.
-  - intros. inversion H0.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Eq. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Eq. auto. auto. }
-        apply bs_Eq_T with (za := za) (zb := zb). auto. auto. auto.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Eq. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Eq. auto. auto. }
-        apply bs_Eq_F with (za := za) (zb := zb). auto. auto. auto.
-  - intros. inversion H0.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Ne. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Ne. auto. auto. }
-        apply bs_Ne_T with (za := za) (zb := zb). auto. auto. auto.
-      + assert (lH: [|e1|] s2 => (za)).
-        { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Ne. auto. auto. }
-        assert (rH: [|e2|] s2 => (zb)).
-        { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Ne. auto. auto. }
-        apply bs_Ne_F with (za := za) (zb := zb). auto. auto. auto.
-  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
-    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_And. auto. auto. }
-    assert (rH: [|e2|] s2 => (zb)).
-    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_And. auto. auto. }
-    auto.
-  - intros. inversion H0. assert (lH: [|e1|] s2 => (za)).
-    { apply IHe1. intros. apply H. apply (Z.of_nat 42). apply v_Or. auto. auto. }
-    assert (rH: [|e2|] s2 => (zb)).
-    { apply IHe2. intros. apply H. apply (Z.of_nat 42). apply v_Or. auto. auto. }
-    auto.
+  intros e s1 s2; induction e.
+  - intros. inversion_eval. auto.
+  - intros. remember (H i (v_Var i)) as eq. 
+    unfold equivalent_states in eq. inversion_eval. constructor.
+    destruct (eq z). auto.
+  - intros. inversion_eval. econstructor. 
+    + apply IHe1.
+      * intros.  apply H. constructor. auto.
+      * eassumption.
+    + apply IHe2.
+      * intros.  apply H. constructor. auto.
+      * eassumption.
+    + assumption.
 Qed.
 
 (* Semantic equivalence *)
@@ -340,64 +232,16 @@ Qed.
 
 (* Contexts *)
 Inductive Context : Type :=
-  | Hole : Context
-  | AddL : Context -> expr -> Context
-  | SubL : Context -> expr -> Context
-  | MulL : Context -> expr -> Context
-  | DivL : Context -> expr -> Context
-  | ModL : Context -> expr -> Context
-  | LeL  : Context -> expr -> Context
-  | LtL  : Context -> expr -> Context
-  | GeL  : Context -> expr -> Context
-  | GtL  : Context -> expr -> Context
-  | EqL  : Context -> expr -> Context
-  | NeL  : Context -> expr -> Context
-  | AndL : Context -> expr -> Context
-  | OrL  : Context -> expr -> Context
-  | AddR : expr -> Context -> Context
-  | SubR : expr -> Context -> Context
-  | MulR : expr -> Context -> Context
-  | DivR : expr -> Context -> Context
-  | ModR : expr -> Context -> Context
-  | LeR  : expr -> Context -> Context
-  | LtR  : expr -> Context -> Context
-  | GeR  : expr -> Context -> Context
-  | GtR  : expr -> Context -> Context
-  | EqR  : expr -> Context -> Context
-  | NeR  : expr -> Context -> Context
-  | AndR : expr -> Context -> Context
-  | OrR  : expr -> Context -> Context.
+| Hole : Context
+| BopL : bop -> Context -> expr -> Context
+| BopR : bop -> expr -> Context -> Context.
 
 (* Plugging an expression into a context *)
 Fixpoint plug (C : Context) (e : expr) : expr := 
   match C with
   | Hole => e
-  | AddL C e1 => Add (plug C e) e1
-  | SubL C e1 => Sub (plug C e) e1
-  | MulL C e1 => Mul (plug C e) e1
-  | DivL C e1 => Div (plug C e) e1
-  | ModL C e1 => Mod (plug C e) e1
-  | LeL  C e1 => Le  (plug C e) e1
-  | LtL  C e1 => Lt  (plug C e) e1
-  | GeL  C e1 => Ge  (plug C e) e1
-  | GtL  C e1 => Gt  (plug C e) e1
-  | EqL  C e1 => Eq  (plug C e) e1
-  | NeL  C e1 => Ne  (plug C e) e1
-  | AndL C e1 => And (plug C e) e1
-  | OrL  C e1 => Or  (plug C e) e1
-  | AddR e1 C => Add e1 (plug C e)
-  | SubR e1 C => Sub e1 (plug C e)
-  | MulR e1 C => Mul e1 (plug C e)
-  | DivR e1 C => Div e1 (plug C e)
-  | ModR e1 C => Mod e1 (plug C e)
-  | LeR  e1 C => Le  e1 (plug C e)
-  | LtR  e1 C => Lt  e1 (plug C e)
-  | GeR  e1 C => Ge  e1 (plug C e)
-  | GtR  e1 C => Gt  e1 (plug C e)
-  | EqR  e1 C => Eq  e1 (plug C e)
-  | NeR  e1 C => Ne  e1 (plug C e)
-  | AndR e1 C => And e1 (plug C e)
-  | OrR  e1 C => Or  e1 (plug C e)
+  | BopL b C e1 => Bop b (plug C e) e1
+  | BopR b e1 C => Bop b (plug C e) e1
   end.
 
 Notation "C '<~' e" := (plug C e) (at level 43, no associativity).
@@ -413,65 +257,121 @@ where "e1 '~c~' e2" := (contextual_equivalent e1 e2).
 (* Contextual equivalence is equivalent to the semantic one *)
 Lemma eq_eq_ceq: forall (e1 e2 : expr), e1 ~~ e2 <-> e1 ~c~ e2.
 Proof.
-  intros. split.
-  - intros. inversion H. apply ceq_intro. intros. apply eq_intro. intros.
-    assert (T: forall (C : Context) (e1 e2 : expr) (s : state Z) (n : Z),
-                  (forall (m : Z) (s' : state Z), [|e1|] s' => (m) -> [|e2|] s' => (m)) ->
-                  [|C <~ e1|] s => (n) -> [|C <~ e2|] s => (n) ).
-    { clear. intros C. induction C.
-      - simpl. intros. auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s za H H3). apply bs_Le_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s za H H3). apply bs_Le_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s za H H3). apply bs_Lt_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s za H H3). apply bs_Lt_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s za H H3). apply bs_Ge_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s za H H3). apply bs_Ge_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s za H H3). apply bs_Gt_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s za H H3). apply bs_Gt_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s za H H3). apply bs_Eq_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s za H H3). apply bs_Eq_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s za H H3). apply bs_Ne_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s za H H3). apply bs_Ne_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s za H H3). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H6). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H6). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H6). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H6). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H6). auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Le_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Le_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Lt_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Lt_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Ge_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Ge_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Gt_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Gt_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Eq_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Eq_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Ne_T with za zb. auto. auto. auto.
-        + remember (IHC e1 e2 s zb H H4). apply bs_Ne_F with za zb. auto. auto. auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H4). auto.
-      - simpl. intros. inversion H0. remember (IHC e1 e2 s zb H H4). auto. }
-    split.
-    + intros. apply T with e1. intros. apply H0. auto. auto.
-    + intros. apply T with e2. intros. apply H0. auto. auto.
-  - intros. inversion H. remember (H0 Hole). auto.
+  intros; split;
+  [ intros; constructor; intros C; constructor; inversion_clear H;
+    generalize dependent H0; revert e1 e2; induction C; solve
+    [ intros; simpl; split;
+      ( intros; inversion_clear H; econstructor;
+        [ eapply IHC;
+          [ intros; solve
+            [ eapply (H0 n0 s0)
+            | symmetry; eapply (H0 n0 s0) ]
+          | eassumption ]
+        | eassumption
+        | assumption ] )
+    | auto ]
+  | intros; inversion H; remember (H0 Hole); auto ].
+Qed.
+
+
+(* Small-step semantics *)
+
+Reserved Notation "e -- st --> r" (at level 0).
+
+(* One step reduction relation *)
+Inductive ss_step : state Z -> expr -> expr -> Prop :=
+| ss_Var    : forall (s : state Z) (i : id) (z : Z), s / i => z -> (Var i) -- s --> (Const z)
+| ss_Bop_L  : forall (s : state Z) (op : bop) (a a2 b : expr),
+                a -- s --> a2 -> (Bop op a b) -- s --> (Bop op a2 b)
+| ss_Bop_R  : forall (s : state Z) (op : bop) (b b2 : expr) (za : Z),
+                b -- s --> b2 -> (Bop op (Const za) b) -- s --> (Bop op (Const za) b2)
+| ss_Bop_Ev : forall (s : state Z) (op : bop) (za zb zr : Z),
+                bop_eval op za zb zr -> (Bop op (Const za) (Const zb)) -- s --> (Const zr)
+where "e -- st --> r" := (ss_step st e r).
+
+Reserved Notation "e -- st -->> r" (at level 0).
+
+(* Many step reduction relation *)
+Inductive ss_chain : state Z -> expr -> expr -> Prop :=
+| ss_Id   : forall (s : state Z) (e : expr), e -- s -->> e
+| ss_Step : forall (s : state Z) (e e2 r : expr),
+              e -- s --> e2 -> e2 -- s -->> r -> e -- s -->> r
+where "e -- st -->> r" := (ss_chain st e r).
+
+
+Lemma ss_chain_transitivity : forall (s : state Z) (a b c : expr),
+  a -- s -->> b -> b -- s -->> c -> a -- s -->> c.
+Proof.
+  intros. induction H.
+  - assumption.
+  - econstructor; eauto.
+Qed.
+
+
+Reserved Notation "[| e |] st --> z" (at level 0).
+
+(* Small step evaluation relation *)
+Inductive ss_eval : expr -> state Z -> Z -> Prop :=
+| ss_Eval : forall (e : expr) (s : state Z) (z : Z), e -- s -->> (Const z) -> [| e |] s --> z
+where "[| e |] st --> z" := (ss_eval e st z).
+
+
+Lemma back_correctness : forall (e e2 : expr) (s : state Z) (z : Z),
+  e -- s --> e2 -> [| e2 |] s => z -> [| e |] s => z.
+Proof.
+  intros e e2 s z H. revert z. induction H.
+  - intros. inversion H0. constructor. congruence.
+  - intros. inversion_clear H0. econstructor.
+    + match goal with H: (_ -> _) |- _ => eapply H end. eassumption.
+    + eassumption.
+    + assumption.
+  - intros. inversion_clear H0. inversion_clear H1. econstructor.
+    + econstructor.
+    + match goal with H: (_ -> _) |- _ => eapply H end. eassumption.
+    + assumption.
+  - intros. inversion H0. econstructor.
+    + econstructor.
+    + econstructor.
+    + congruence.
+Qed.
+
+Lemma ss_to_bs : forall (e : expr) (s : state Z) (z : Z),
+  [| e |] s --> z -> [| e |] s => z.
+Proof.
+  intros. inversion_clear H. remember (Const z). induction H0.
+  - match goal with H: (_ = _) |- _ => rewrite H end. auto.
+  - eapply back_correctness. eauto. auto.
+Qed.
+
+Lemma bs_to_ss : forall (e : expr) (s : state Z) (z : Z),
+  [| e |] s => z -> [| e |] s --> z.
+Proof.
+  intros e. induction e.
+  - intros. inversion_clear H. constructor. constructor.
+  - intros. inversion_clear H. constructor. econstructor.
+    + econstructor. eassumption.
+    + constructor.
+  - intros. inversion_clear H. apply IHe1 in H0. apply IHe2 in H1.
+    inversion_clear H0. inversion_clear H1.
+    assert (L: e1 -- s -->> (Const za) -> (Bop b e1 e2) -- s -->> (Bop b (Const za) e2)).
+    { clear. intros H. induction H.
+      - constructor.
+      - econstructor.
+        + eapply ss_Bop_L. eassumption.
+        + assumption. }
+    apply L in H. clear L.
+    assert (R: e2 -- s -->> (Const zb) -> (Bop b (Const za) e2) -- s -->> (Bop b (Const za) (Const zb))).
+    { clear. intros H. induction H.
+      - constructor.
+      - econstructor.
+        + eapply ss_Bop_R. eassumption.
+        + assumption. }
+    apply R in H0. clear R.
+    econstructor. eapply ss_chain_transitivity.
+    + eassumption.
+    + eapply ss_chain_transitivity.
+      * eassumption.
+      * econstructor.
+        { apply ss_Bop_Ev. eassumption. }
+        { constructor. }
 Qed.
